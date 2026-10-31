@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crash Detection System — Login</title>
+<link rel="stylesheet" href="/css/style.css?v=responsive-20260929">
+</head>
+<body class="auth-body">
+  <div class="auth-card">
+    <div class="auth-logo">🚨 Automatic Crash Detection System</div>
+    <p class="auth-subtitle">CCTV-based accident detection &amp; alert dashboard</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-login">Login</button>
+      <button class="tab-btn" id="tab-register">Register</button>
+    </div>
+
+    <form id="login-form" class="auth-form">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="admin" required>
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Enter your password" required>
+      <button type="submit" class="primary-btn">Log In</button>
+      <p class="hint">On first run, the initial admin password is shown once in the server console.</p>
+    </form>
+
+    <form id="register-form" class="auth-form hidden">
+      <label>Choose a username</label>
+      <input type="text" id="register-username" required>
+      <label>Choose a password</label>
+      <input type="password" id="register-password" required>
+      <button type="submit" class="primary-btn">Create Account</button>
+    </form>
+
+    <p id="auth-error" class="error-text hidden"></p>
+  </div>
+
+<script src="/js/api.js"></script>
+<script>
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const errorEl = document.getElementById('auth-error');
+
+  tabLogin.onclick = () => {
+    tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+    loginForm.classList.remove('hidden'); registerForm.classList.add('hidden');
+  };
+  tabRegister.onclick = () => {
+    tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+    registerForm.classList.remove('hidden'); loginForm.classList.add('hidden');
+  };
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  // If already logged in, skip straight to dashboard.
+  if (localStorage.getItem('cds_token')) {
+    window.location.href = '/dashboard.html';
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.classList.add('hidden');
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+    try {
+      const res = await api.login(username, password);
+      localStorage.setItem('cds_token', res.token);
+      localStorage.setItem('cds_user', JSON.stringify(res.user));
+      window.location.href = '/dashboard.html';
+    } catch (err) {
+      showError(err.message || 'Login failed');
+    }
+  });
+
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.classList.add('hidden');
+    const username = document.getElementById('register-username').value;
+    const password = document.getElementById('register-password').value;
+    try {
+      await api.register(username, password);
+      const res = await api.login(username, password);
+      localStorage.setItem('cds_token', res.token);
+      localStorage.setItem('cds_user', JSON.stringify(res.user));
+      window.location.href = '/dashboard.html';
+    } catch (err) {
+      showError(err.message || 'Registration failed');
+    }
+  });
+</script>
+</body>
+</html>

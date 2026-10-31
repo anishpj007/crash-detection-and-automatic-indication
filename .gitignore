@@ -1,0 +1,48 @@
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Local environments and generated Python files
+.venv/
+.venv-*/
+venv/
+**/venv/
+__pycache__/
+*.py[cod]
+
+# Local configuration, databases, models, and detection artifacts
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+backend/models/
+backend/snapshots/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/training_uploads/
+
+# Source footage and generated media/data
+training_videos/
+crash_clips/
+crash_clips.zip
+*.mp4
+*.joblib
+backend/*_contact.jpg
+training_config.json
+training_results.json
+backend/training_results.json
+TRAINING_REPORT.md
+TRAINING_README.md
+output/
+backend/_inspect_user_*.py
+
+# Local backups and temporary files
+*.bak
+tmp/
+backend/venv/
+backend/__pycache__/
+backend/crash_detection.db*
+backend/uploads/
+backend/training_uploads/
+backend/snapshots/

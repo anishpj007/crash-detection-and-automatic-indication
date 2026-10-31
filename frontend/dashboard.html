@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crash Detection Dashboard</title>
+<link rel="stylesheet" href="/css/style.css?v=responsive-20260929">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <nav class="sidebar" aria-label="Main navigation">
+    <div class="brand">🚨 Crash<span>Watch</span></div>
+    <button type="button" class="nav-item active" data-view="overview" aria-current="page"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Overview</span></button>
+    <button type="button" class="nav-item" data-view="upload"><span class="nav-icon" aria-hidden="true">⬆️</span><span class="nav-label">Upload</span></button>
+    <button type="button" class="nav-item" data-view="live"><span class="nav-icon" aria-hidden="true">📷</span><span class="nav-label">Live Camera</span></button>
+    <button type="button" class="nav-item" data-view="incidents"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Incidents</span></button>
+    <button type="button" class="nav-item" data-view="map"><span class="nav-icon" aria-hidden="true">🗺️</span><span class="nav-label">Map</span></button>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="view-title">Overview</h1>
+      <div class="user-chip">
+        <span id="user-label" class="mono"></span>
+        <button class="logout-btn" id="logout-btn">Log out</button>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="view-overview" class="view">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Videos Processed</div><div class="value" id="stat-videos">—</div></div>
+        <div class="stat-card alert"><div class="label">Total Incidents</div><div class="value" id="stat-incidents">—</div></div>
+        <div class="stat-card"><div class="label">High Severity</div><div class="value" id="stat-high">—</div></div>
+        <div class="stat-card ok"><div class="label">Resolved</div><div class="value" id="stat-resolved">—</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><h2>Recent Incidents</h2></div>
+        <div id="recent-incidents-table"></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div id="view-upload" class="view hidden">
+      <div class="panel">
+        <div class="panel-title"><h2>Upload CCTV / Dashcam Footage</h2></div>
+        <div class="upload-zone" id="upload-zone">
+          <div id="upload-zone-text">📹 Drag &amp; drop a video here, or click to browse<br>
+          <small>MP4, AVI, MOV, MKV — up to 300MB</small></div>
+          <input type="file" id="file-input" accept=".mp4,.avi,.mov,.mkv" class="hidden">
+        </div>
+        <div class="incident-location-card">
+          <div class="incident-location-icon">📍</div>
+          <div class="incident-location-copy">
+            <span class="incident-location-label">Fixed incident location</span>
+            <strong>SRM Institute of Science and Technology, Kattankulathur</strong>
+            <small>Every detected incident in this project will use this location.</small>
+          </div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query=12.824943%2C80.045181" target="_blank" rel="noopener noreferrer">Open map ↗</a>
+        </div>
+        <button class="primary-btn" id="upload-btn" disabled>Upload &amp; Start Analysis</button>
+        <div class="progress-bar hidden" id="progress-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+        <p id="upload-status" class="hint"></p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><h2>No footage handy?</h2></div>
+        <p class="hint" style="text-align:left">
+          Run <code class="mono">python generate_demo_video.py</code> in the backend folder to create a synthetic
+          test clip (<code class="mono">demo_crash.mp4</code>) with a staged collision, then upload it here to see
+          the full pipeline in action.
+        </p>
+      </div>
+    </div>
+
+    <!-- LIVE CAMERA -->
+    <div id="view-live" class="view hidden">
+      <div class="panel">
+        <div class="panel-title"><h2>Live Accident Detection</h2></div>
+        <p class="hint" style="text-align:left; margin-bottom:14px;">Select your live source: <b>📷 Start Webcam</b> (point camera at phone/screen), <b>🖥️ Share Screen / Window</b> (share tab/player playing the crash video), or <b>📁 Stream Video File</b> (pick the trained video file directly). The detector uses the trained temporal SVM model with screen ROI auto-isolation.</p>
+
+        <div class="camera-layout">
+          <div class="camera-frame">
+            <video id="live-video" autoplay muted playsinline></video>
+            <div id="live-overlay" class="camera-overlay">DETECTOR OFF</div>
+          </div>
+          <div class="camera-side">
+            <div class="live-status-card" id="live-status-card">
+              <div class="live-dot idle" id="live-dot"></div>
+              <div>
+                <div class="live-status-label">Detector status</div>
+                <div class="live-status-value" id="live-status">Stopped</div>
+              </div>
+            </div>
+            <div class="incident-trigger" id="live-alert">
+              <div class="incident-trigger-title">No accident detected</div>
+              <div class="hint">Play the accident clip in view of the camera or screen share.</div>
+            </div>
+            <p id="sms-status" class="hint" style="text-align:left; margin:10px 0 0;">Checking SMS alert setup…</p>
+            <div class="live-stats">
+              <div><span>Frames sent</span><b id="live-frames">0</b></div>
+              <div><span>Incidents</span><b id="live-incidents">0</b></div>
+            </div>
+            <div id="live-debug" class="hint" style="margin-top:10px; text-align:left; font-family:monospace;">Model: ready</div>
+          </div>
+        </div>
+
+        <div class="incident-location-card" style="margin-top:16px;">
+          <div class="incident-location-icon">📍</div>
+          <div class="incident-location-copy">
+            <span class="incident-location-label">Fixed incident location</span>
+            <strong>SRM Institute of Science and Technology, Kattankulathur</strong>
+            <small>Live detections will be tagged to this project location.</small>
+          </div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query=12.824943%2C80.045181" target="_blank" rel="noopener noreferrer">Open map ↗</a>
+        </div>
+
+        <div class="live-controls" style="flex-wrap: wrap;">
+          <button class="primary-btn" id="start-live-btn">📷 Start Webcam</button>
+          <button class="primary-btn" id="start-screen-btn">🖥️ Share Screen / Window</button>
+          <button class="primary-btn" id="start-file-btn">📁 Stream Video File</button>
+          <input type="file" id="live-file-input" accept=".mp4,.avi,.mov,.mkv" class="hidden">
+          <button class="secondary-btn" id="stop-live-btn" disabled>⏹️ Stop</button>
+        </div>
+        <p id="live-error" class="hint"></p>
+        <canvas id="live-canvas" class="hidden"></canvas>
+      </div>
+    </div>
+
+    <!-- INCIDENTS -->
+    <div id="view-incidents" class="view hidden">
+      <div class="panel">
+        <div class="panel-title"><h2>All Incidents</h2></div>
+        <div class="filter-bar">
+          <select id="filter-severity">
+            <option value="">All severities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+          <select id="filter-status">
+            <option value="">All statuses</option>
+            <option value="new">New</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="resolved">Resolved</option>
+            <option value="false_alarm">False alarm</option>
+          </select>
+        </div>
+        <div id="incidents-table"></div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="view-map" class="view hidden">
+      <div class="panel">
+        <div class="panel-title"><h2>Incident Map</h2></div>
+        <div class="map-location-summary">
+          <div class="incident-location-icon">📍</div>
+          <div class="incident-location-copy">
+            <span class="incident-location-label">Fixed project location</span>
+            <strong>SRM Institute of Science and Technology, Kattankulathur</strong>
+            <small id="map-incident-count">All detected incidents are shown at this location.</small>
+          </div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query=12.824943%2C80.045181" target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/dashboard.js?v=responsive-20260929"></script>
+</body>
+</html>
